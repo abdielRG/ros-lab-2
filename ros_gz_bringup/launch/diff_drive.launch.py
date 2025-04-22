@@ -17,8 +17,8 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, GroupAction
+from launch_ros.actions import PushRosNamespace, SetRemap
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -42,14 +42,14 @@ def generate_launch_description():
 
     # Setup to launch the simulator and Gazebo world
     gz_sim = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')),
-        launch_arguments={'gz_args': PathJoinSubstitution([
-            pkg_project_gazebo,
-            'worlds',
-            'diff_drive.sdf'
-        ])}.items(),
-    )
+                PythonLaunchDescriptionSource(
+                    os.path.join(pkg_ros_gz_sim, 'launch', 'gz_sim.launch.py')),
+                launch_arguments={'gz_args': PathJoinSubstitution([
+                    pkg_project_gazebo,
+                    'worlds',
+                    'diff_drive.sdf'
+                ])}.items(),
+            )
 
     # Takes the description and joint angles as inputs and publishes the 3D poses of the robot links
     robot_state_publisher = Node(
@@ -83,10 +83,14 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        gz_sim,
-        DeclareLaunchArgument('rviz', default_value='true',
-                              description='Open RViz.'),
-        bridge,
-        robot_state_publisher,
-        rviz
+    GroupAction(
+            actions=[
+            SetRemap(src='/diff_drive/cmd_vel', dst='/ramire37/cmd_vel'),
+            PushRosNamespace('ramire37'),
+            gz_sim,
+            DeclareLaunchArgument('rviz', default_value='true',
+                                  description='Open RViz.'),
+            bridge,
+            robot_state_publisher,
+            rviz])
     ])

@@ -54,7 +54,7 @@ class DiffDriveSimPubSub : public rclcpp::Node
 		
 	    /* publisher -- send cmd_vel messages to diff_drive */
             publisher_ = this->create_publisher<geometry_msgs::msg::Twist>(
-			    "/diff_drive/cmd_vel", 10);
+			    "/ramire37/diff_drive/cmd_vel", 10);
     
             /* lambda function passed to subscription_ 
 	     * TODO: change this to wall-following algorithm 
@@ -86,7 +86,7 @@ class DiffDriveSimPubSub : public rclcpp::Node
     
             /* subscription -- recv laser rangefinder data from diff_drive */
             subscription_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-			    "/diff_drive/scan", 10, topic_feedback);
+			    "/ramire37/diff_drive/scan", 10, topic_feedback);
 
 
             /* lambda function passed to timer_
