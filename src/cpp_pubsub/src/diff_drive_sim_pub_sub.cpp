@@ -41,7 +41,7 @@ class DiffDriveSimPubSub : public rclcpp::Node
 	rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr subscription_;
 	size_t count_;
 
-	float fwd, trn;  // Twist motion params
+	float fwd, trn;    // Twist motion params
 	char pbuf[1024];   // print buffer
 	char* pbp;         // ptr into print buffer
 
@@ -57,27 +57,32 @@ class DiffDriveSimPubSub : public rclcpp::Node
 			    "/ramire37/diff_drive/cmd_vel", 10);
     
             /* lambda function passed to subscription_ 
-	     * TODO: change this to wall-following algorithm 
 	     *
 	     * scan.ranges[1] = left-facing range
 	     * scan.ranges[0] = front-facing range 
-	     * */
-            auto topic_feedback = [this](sensor_msgs::msg::LaserScan scan) -> void {
-                // RCLCPP_INFO(this->get_logger(), "Scan received. Left range: %f. Front range: %f. ",
-		//    scan.ranges[1], scan.ranges[0]);
+	     */
+            auto topic_feedback = [this](sensor_msgs::msg::LaserScan scan) -> void { 
 		pbp = pbuf;  // Reset buffer write head
 		pbp += sprintf(pbp, "L-range: %f. F-range: %f. ", scan.ranges[1], scan.ranges[0]);
 
 		if (scan.ranges[0] < 2.0) {
+		    // Close to wall in front
+		    fwd = 0.0;
+		    trn = -1.0;
+		    pbp += sprintf(pbp, "Turning right...");
+		    pbp = 0;
+		}
+		else if (scan.ranges[1] > 2.0 && scan.ranges[0] > 3.0) {
+		    // Wall on right too far, get closer
 		    fwd = 0.0;
 		    trn = 1.0;
-		    pbp += sprintf(pbp, "Turning...\n");
+		    pbp += sprintf(pbp, "Turning left...");
 		    pbp = 0;
 		}
 		else {
 		    fwd = 0.5;
 		    trn = 0.0;
-		    pbp += sprintf(pbp, "Moving forward...\n");
+		    pbp += sprintf(pbp, "Moving forward...");
 		    pbp = 0;
 		}
 
@@ -89,18 +94,19 @@ class DiffDriveSimPubSub : public rclcpp::Node
 			    "/ramire37/diff_drive/scan", 10, topic_feedback);
 
 
-            /* lambda function passed to timer_
-	     * TODO: change this to wall-following algorithm */
+            /* lambda function passed to timer_ */
             auto timer_callback = [this]() -> void {
                 auto message = geometry_msgs::msg::Twist();
 	
+		// Update Twist message with latest calculated params
 	        message.linear.x = fwd;
 	        message.angular.z = trn;
 	               
                 this->publisher_->publish(message);
             };
 
-            timer_ = this->create_wall_timer(500ms, timer_callback);
+            /* Interval at which the Twist message is sent */
+	    timer_ = this->create_wall_timer(500ms, timer_callback);
         }
 };
 
